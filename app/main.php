@@ -28,7 +28,6 @@ while (true) {
         }
     }
 }
-socket_write($socket, "+PONG\r\n");
 
 socket_close($sock);
 ?>
