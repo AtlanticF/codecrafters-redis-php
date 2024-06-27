@@ -1,4 +1,6 @@
 <?php
+require_once "protocol.php";
+
 error_reporting(E_ALL);
 
 $sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
@@ -13,6 +15,8 @@ $socketPool = [$sock];
 $write = array();
 $expect = array();
 
+$protocol = new Protocol();
+
 while (true) {
     $read = $socketPool;
     socket_select($read, $write, $except, NULL);
@@ -24,7 +28,22 @@ while (true) {
         } else {
             $inputStr = socket_read($socket, 1024);
             if (!empty($inputStr)) {
-                socket_write($socket, "+PONG\r\n");
+                $decoded = $protocol->RESP2Decode($inputStr);
+                echo "Decode: " . json_encode($decoded) . "\n";
+                if (!empty($decoded)) {
+                    // cmd args1 args2 args3
+                    switch ($decoded[0]) {
+                        case "PING":
+                            socket_write($socket, "+PONG\r\n");
+                            break;
+                        case "ECHO":
+                            $output = $protocol->RESP2Encode($decoded[1]);
+                            socket_write($socket, $output);
+                            break;
+                        default:
+                            socket_write($socket, "+PONG\r\n");
+                    }
+                }
             }
         }
     }
