@@ -7,10 +7,25 @@ $sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 socket_set_option($sock, SOL_SOCKET, SO_REUSEADDR, 1);
 socket_bind($sock, 'localhost', 6379);
 socket_listen($sock, 5);
-$socket = socket_accept($sock); // Wait for first client
 
-while ($data = socket_read($socket, 1024)) {
-    socket_write($socket, "+PONG\r\n");
+echo "Server started. Waiting for connections...\n";
+$socketPool = [$sock];
+$write = array();
+$expect = array();
+
+while (true) {
+    $read = $socketPool;
+    socket_select($read, $write, $except, NULL);
+
+    foreach ($read as $socket) {
+        if ($socket == $sock) {
+            $socket = socket_accept($sock);
+            $socketPool[] = $socket;
+        } else {
+            $inputStr = socket_read($socket, 1024);
+            if (!empty($inputStr)) {
+                socket_write($socket, "+PONG\r\n");
+            }
+        }
+    }
 }
-
-socket_close($sock);
