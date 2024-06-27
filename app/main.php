@@ -9,6 +9,25 @@ socket_bind($sock, 'localhost', 6379);
 socket_listen($sock, 5);
 $socket = socket_accept($sock); // Wait for first client
 
+while (true) {
+    $data = socket_read($socket, 1024);
+    // No more data.
+    if ($data === false) break;
+    // Empty data.
+    if ($data === '') break;
+    // \n explode
+    $cmdArr = explode("\n", $data);
+    for ($i = 0; $i < count($cmdArr); $i++) {
+        if ($cmdArr[$i] === 'PING') {
+            socket_write($socket, "+PONG\r\n");
+        } else if ($cmdArr[$i] === 'QUIT') {
+            socket_write($socket, "+OK\r\n");
+            break;
+        } else {
+            socket_write($socket, "-ERR unknown command '$cmdArr[$i]'\r\n");
+        }
+    }
+}
 socket_write($socket, "+PONG\r\n");
 
 socket_close($sock);
