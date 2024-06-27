@@ -9,18 +9,8 @@ socket_bind($sock, 'localhost', 6379);
 socket_listen($sock, 5);
 $socket = socket_accept($sock); // Wait for first client
 
-$data = socket_read($socket, 1024);
-if ($data == "PING") {
+while ($data = socket_read($socket, 1024)) {
     socket_write($socket, "+PONG\r\n");
-} else {
-    // \n explode
-    $cmdArr = explode("\n", $data);
-    for ($i = 0; $i < count($cmdArr); $i++) {
-        if ($cmdArr[$i] == 'PING') {
-            socket_write($socket, "+PONG\r\n");
-        }
-    }
 }
 
 socket_close($sock);
-?>
