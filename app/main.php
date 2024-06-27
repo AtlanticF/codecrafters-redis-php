@@ -9,7 +9,7 @@ socket_bind($socket, 'localhost', 6379);
 socket_listen($socket, 5);
 socket_accept($socket); // Wait for first client
 
-socket_write($socket, "+PONG\r\n");
+socket_write($socket, "+PONG\r\n", strlen("+PONG\r\n"));
 
 socket_close($socket);
 ?>
