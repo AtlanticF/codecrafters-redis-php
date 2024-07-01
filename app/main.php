@@ -17,6 +17,9 @@ $expect = array();
 
 $protocol = new Protocol();
 
+// storage key value data.
+$storageDataKeyValue = [];
+
 while (true) {
     $read = $socketPool;
     socket_select($read, $write, $except, NULL);
@@ -39,6 +42,24 @@ while (true) {
                         case "ECHO":
                             $output = $protocol->RESP2Encode($decoded[1]);
                             socket_write($socket, $output);
+                            break;
+                        case "SET":
+                            // implement set command
+                            $key = $decoded[1];
+                            $value = $decoded[2];
+                            $storageDataKeyValue[$key] = $value;
+                            $output = $protocol->RESP2Encode("OK", 1);
+                            socket_write($socket, $output);
+                            break;
+                        case "GET":
+                            // implement get command
+                            $key = $decoded[1];
+                            if (!isset($storageDataKeyValue[$key])) {
+                                $res = "";
+                            } else {
+                                $res = $storageDataKeyValue[$key];
+                            }
+                            socket_write($socket, $protocol->RESP2Encode($res));
                             break;
                         default:
                             socket_write($socket, "+PONG\r\n");

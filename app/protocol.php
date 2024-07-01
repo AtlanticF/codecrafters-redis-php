@@ -33,9 +33,35 @@ class Protocol {
 
     /**
      * @param string $input
+     * @param int $type 0=bulk strings 1=simple strings
      * @return string
      */
-    public function RESP2Encode(string $input): string {
+    public function RESP2Encode(string $input, int $type = 0): string {
+        return match ($type) {
+            1 => $this->returnSimpleStrings($input),
+            default => $this->defaultReturnBulkStrings($input),
+        };
+    }
+
+    /**
+     * return simple strings
+     * https://redis.io/docs/latest/develop/reference/protocol-spec/#simple-strings
+     * @param string $input
+     * @return string
+     */
+    public function returnSimpleStrings(string $input): string
+    {
+        return "+" . $input . "\r\n";
+    }
+
+    /**
+     * return bulk strings
+     * https://redis.io/docs/latest/develop/reference/protocol-spec/#bulk-strings
+     * @param string $input
+     * @return string
+     */
+    public function defaultReturnBulkStrings(string $input): string
+    {
         // default return bulk strings
         // $<length>\r\n<data>\r\n
         $output = "$";
