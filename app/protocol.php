@@ -62,6 +62,10 @@ class Protocol {
      */
     public function defaultReturnBulkStrings(string $input): string
     {
+        // null bulk string
+        if (empty($input)) {
+            return "$-1\r\n";
+        }
         // default return bulk strings
         // $<length>\r\n<data>\r\n
         $output = "$";

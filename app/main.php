@@ -18,6 +18,7 @@ $expect = array();
 $protocol = new Protocol();
 
 // storage key value data.
+// key => ['value', 'expireAt']
 $storageDataKeyValue = [];
 
 while (true) {
@@ -35,6 +36,7 @@ while (true) {
                 echo "Decode: " . json_encode($decoded) . "\n";
                 if (!empty($decoded)) {
                     // cmd args1 args2 args3
+                    $cmd = strtoupper($decoded[0]);
                     switch ($decoded[0]) {
                         case "PING":
                             socket_write($socket, "+PONG\r\n");
@@ -47,7 +49,18 @@ while (true) {
                             // implement set command
                             $key = $decoded[1];
                             $value = $decoded[2];
-                            $storageDataKeyValue[$key] = $value;
+                            // px 100
+                            $pxCmd = $decoded[3] ?? null;
+                            $expireAtMilliseconds = 0;
+                            if ("px" == $decoded[3]) {
+                                $expireMilliseconds = $decoded[4] ?? 0;
+                                if ($expireMilliseconds > 0) {
+                                    $expireAtMilliseconds = microtime(true) * 1000 + $expireMilliseconds;
+                                }
+                            }
+
+                            $d = ['value' => $value, 'expireAt' => $expireAtMilliseconds];
+                            $storageDataKeyValue[$key] = $d;
                             $output = $protocol->RESP2Encode("OK", 1);
                             socket_write($socket, $output);
                             break;
@@ -55,11 +68,16 @@ while (true) {
                             // implement get command
                             $key = $decoded[1];
                             if (!isset($storageDataKeyValue[$key])) {
-                                $res = "";
+                                $value = "";
                             } else {
                                 $res = $storageDataKeyValue[$key];
+                                $value = $res['value'] ?? "";
+                                if ($res['expireAt'] > 0 && $res['expireAt'] < microtime(true) * 1000) {
+                                    // expired will return null bulk strings: $-1\r\n
+                                    $value = "";
+                                }
                             }
-                            socket_write($socket, $protocol->RESP2Encode($res));
+                            socket_write($socket, $protocol->RESP2Encode($value));
                             break;
                         default:
                             socket_write($socket, "+PONG\r\n");
