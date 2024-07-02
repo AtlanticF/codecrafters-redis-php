@@ -6,10 +6,23 @@ error_reporting(E_ALL);
 $shortOptions = "p:"; // -p
 $longOptions = [
     "port:", // --port
+    "replicaof:" // --replicaof "<MASTER_HOST> <MASTER_PORT>"
 ];
 $options = getopt($shortOptions, $longOptions);
 // p or port => set port
 $port = $options['p'] ?? $options['port'] ?? 6379;
+
+$nodeRole = "master";
+// replicaof => set replicaof
+$replicaof = $options['replicaof'] ?? null;
+if (!empty($replicaof)) {
+    $replicaof = explode(" ", $replicaof);
+    $replicaof = [
+        "host" => $replicaof[0],
+        "port" => $replicaof[1]
+    ];
+    $nodeRole = "slave";
+}
 
 $sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 // Since the tester restarts your program quite often, setting SO_REUSEADDR
@@ -90,7 +103,7 @@ while (true) {
                         case "INFO":
                             // implement info command
                             $arg = $decoded[1] ?? null;
-                            $info = "role:master\r\nconnected_slaves:0";
+                            $info = "role:$nodeRole\r\n";
                             socket_write($socket, $protocol->RESP2Encode($info));
                             break;
                         default:
