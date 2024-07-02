@@ -23,6 +23,11 @@ if (!empty($replicaof)) {
     ];
     $nodeRole = "slave";
 }
+if ($nodeRole == "master") {
+    // master_replid and master_repl_offset
+    $masterReplId = bin2hex(random_bytes(40));
+    $masterReplOffset = 0;
+}
 
 $sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 // Since the tester restarts your program quite often, setting SO_REUSEADDR
@@ -104,6 +109,10 @@ while (true) {
                             // implement info command
                             $arg = $decoded[1] ?? null;
                             $info = "role:$nodeRole\r\n";
+                            if ($nodeRole == "master") {
+                                $info .= "master_replid:$masterReplId\r\n";
+                                $info .= "master_repl_offset:$masterReplOffset\r\n";
+                            }
                             socket_write($socket, $protocol->RESP2Encode($info));
                             break;
                         default:
