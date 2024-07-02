@@ -87,6 +87,12 @@ while (true) {
                             }
                             socket_write($socket, $protocol->RESP2Encode($value));
                             break;
+                        case "INFO":
+                            // implement info command
+                            $arg = $decoded[1] ?? null;
+                            $info = "role:master\r\nconnected_slaves:0";
+                            socket_write($socket, $protocol->RESP2Encode($info));
+                            break;
                         default:
                             socket_write($socket, "+PONG\r\n");
                     }
