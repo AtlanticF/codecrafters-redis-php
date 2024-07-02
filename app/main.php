@@ -28,6 +28,10 @@ if ($nodeRole == "master") {
     $masterReplId = bin2hex(random_bytes(40));
     $masterReplOffset = 0;
 }
+if ($nodeRole == "slave") {
+    $masterHost = $replicaof['host'];
+    $masterPort = $replicaof['port'];
+}
 
 $sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 // Since the tester restarts your program quite often, setting SO_REUSEADDR
@@ -37,11 +41,27 @@ socket_bind($sock, 'localhost', $port);
 socket_listen($sock, 5);
 
 echo "Server started. Waiting for connections...\n";
+
+
+$protocol = new Protocol();
+
+// If node is slave, try to connect master node and send PING command.
+if ($nodeRole == "slave") {
+    $slaveConnMasterSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+    if (!socket_connect($slaveConnMasterSocket, $masterHost, $masterPort)) {
+        echo "Connect master node failed.\n";
+        exit(1);
+    }
+    // send PING command to master node.
+    // PING is redis arrays type: https://redis.io/docs/latest/develop/reference/protocol-spec/#arrays
+
+    socket_write($slaveConnMasterSocket, $protocol->RESP2Encode(["PING"], 2));
+}
+
 $socketPool = [$sock];
 $write = array();
 $expect = array();
 
-$protocol = new Protocol();
 
 // storage key value data.
 // key => ['value', 'expireAt']

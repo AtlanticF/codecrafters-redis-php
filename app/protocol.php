@@ -32,15 +32,31 @@ class Protocol {
     }
 
     /**
-     * @param string $input
-     * @param int $type 0=bulk strings 1=simple strings
+     * @param array|string $input
+     * @param int $type 0=bulk strings 1=simple strings 2=arrays
      * @return string
      */
-    public function RESP2Encode(string $input, int $type = 0): string {
+    public function RESP2Encode(array|string $input, int $type = 0): string {
         return match ($type) {
             1 => $this->returnSimpleStrings($input),
+            2 => $this->returnArrayTypeStrings($input),
             default => $this->defaultReturnBulkStrings($input),
         };
+    }
+
+    /**
+     * https://redis.io/docs/latest/develop/reference/protocol-spec/#arrays
+     * @param array $input
+     * @return string
+     */
+    public function returnArrayTypeStrings(array $input): string
+    {
+        // *<number-of-elements>\r\n$<length-of-element-1>\r\n<element-1>...<element-n>
+        $output = "*" . count($input) . "\r\n";
+        foreach ($input as $element) {
+            $output .= $this->defaultReturnBulkStrings($element);
+        }
+        return $output;
     }
 
     /**
