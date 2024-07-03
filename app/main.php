@@ -53,15 +53,34 @@ if ($nodeRole == "slave") {
         exit(1);
     }
     // send PING command to master node.
-    // PING is redis arrays type: https://redis.io/docs/latest/develop/reference/protocol-spec/#arrays
-
     socket_write($slaveConnMasterSocket, $protocol->RESP2Encode(["PING"], 2));
+    // receive PONG command.
+    $response = socket_read($slaveConnMasterSocket, 1024);
+    if (strtoupper($response) != "+PONG\r\n") {
+        echo "Connect master node failed.\n";
+        exit(1);
+    }
+    // send twice REPLCONF RESP Arrays type
+    // REPLCONF listening-port <PORT>
+    // REPLCONF capa psync2
+    socket_write($slaveConnMasterSocket, $protocol->RESP2Encode(["REPLCONF", "listening-port", $port], 2));
+    // receive OK
+    $response = socket_read($slaveConnMasterSocket, 1024);
+    if (strtoupper($response) != "+OK\r\n") {
+        echo "[REPLCONF1] response failed.\n";
+        exit(1);
+    }
+    socket_write($slaveConnMasterSocket, $protocol->RESP2Encode(["REPLCONF", "capa", "psync2"], 2));
+    $response = socket_read($slaveConnMasterSocket, 1024);
+    if (strtoupper($response) != "+OK\r\n") {
+        echo "[REPLCONF2] response failed.\n";
+        exit(1);
+    }
 }
 
 $socketPool = [$sock];
 $write = array();
 $expect = array();
-
 
 // storage key value data.
 // key => ['value', 'expireAt']
@@ -135,8 +154,11 @@ while (true) {
                             }
                             socket_write($socket, $protocol->RESP2Encode($info));
                             break;
+                        case "REPLCONF":
+                            socket_write($socket,  $protocol->RESP2Encode("OK", 1));
+                            break;
                         default:
-                            socket_write($socket, "+PONG\r\n");
+                            socket_write($socket,  $protocol->RESP2Encode("PONG", 1));
                     }
                 }
             }
