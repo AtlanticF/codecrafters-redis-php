@@ -13,6 +13,7 @@ $options = getopt($shortOptions, $longOptions);
 $port = $options['p'] ?? $options['port'] ?? 6379;
 
 $nodeRole = "master";
+
 // replicaof => set replicaof
 $replicaof = $options['replicaof'] ?? null;
 if (!empty($replicaof)) {
@@ -24,6 +25,8 @@ if (!empty($replicaof)) {
     $nodeRole = "slave";
 }
 if ($nodeRole == "master") {
+    // childNodes
+    $childNodes = [];
     // master_replid and master_repl_offset
     $masterReplId = bin2hex(random_bytes(40));
     $masterReplOffset = 0;
@@ -41,7 +44,6 @@ socket_bind($sock, 'localhost', $port);
 socket_listen($sock, 5);
 
 echo "Server started. Waiting for connections...\n";
-
 
 $protocol = new Protocol();
 
@@ -76,6 +78,10 @@ if ($nodeRole == "slave") {
         echo "[REPLCONF2] response failed.\n";
         exit(1);
     }
+    // slave connect master success.
+    // first sync
+    // send PSYNC ? -1
+    socket_write($slaveConnMasterSocket, $protocol->RESP2Encode(["PSYNC", "?", "-1"], 2));
 }
 
 $socketPool = [$sock];
@@ -157,6 +163,18 @@ while (true) {
                         case "REPLCONF":
                             socket_write($socket,  $protocol->RESP2Encode("OK", 1));
                             break;
+                        case "PSYNC":
+                            if ($nodeRole == "master") {
+                                // master node
+                                // PSYNC ? -1
+                                $replId = $decoded[1];
+                                $offset = $decoded[2];
+                                if ($replId == "?") {
+                                    // send replid and offset
+                                    $output = $protocol->RESP2Encode(["+FULLRESYNC", $masterReplId, 0], 1);
+                                    socket_write($socket, $output);
+                                }
+                            }
                         default:
                             socket_write($socket,  $protocol->RESP2Encode("PONG", 1));
                     }
