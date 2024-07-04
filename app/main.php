@@ -171,7 +171,8 @@ while (true) {
                                 $offset = $decoded[2];
                                 if ($replId == "?") {
                                     // send replid and offset
-                                    $output = $protocol->RESP2Encode(["+FULLRESYNC", $masterReplId, 0], 1);
+                                    $msg = "FULLRESYNC $masterReplId 0";
+                                    $output = $protocol->RESP2Encode($msg, 1);
                                     socket_write($socket, $output);
                                 }
                             }
