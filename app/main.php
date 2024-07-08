@@ -30,16 +30,6 @@ if ($nodeRole == "master") {
     // master_replid and master_repl_offset
     $masterReplId = bin2hex(random_bytes(40));
     $masterReplOffset = 0;
-    // init empty rdb file
-//    try {
-//        $emptyRdbBase64 = "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
-//        $rdbFileName = date("YmdHis") . '.rdb';
-//        file_put_contents($rdbFileName, sodium_base642bin($emptyRdbBase64, SODIUM_BASE64_VARIANT_ORIGINAL));
-//    } catch (SodiumException $e) {
-//        echo "Init empty rdb file failed.\n";
-//        echo $e->getMessage();
-//        exit(1);
-//    }
 }
 if ($nodeRole == "slave") {
     $masterHost = $replicaof['host'];
@@ -144,6 +134,19 @@ while (true) {
                             $storageDataKeyValue[$key] = $d;
                             $output = $protocol->RESP2Encode("OK", 1);
                             socket_write($socket, $output);
+                            // set command success, sync to slave
+                            if ($nodeRole == "master" && !empty($childNodes)) {
+                                foreach ($childNodes as $childSock) {
+                                    // RESP Array
+                                    $syncData = ["SET", $key, $value];
+                                    if ($expireAtMilliseconds > 0) {
+                                        $syncData[] = "px";
+                                        $syncData[] = $expireAtMilliseconds;
+                                    }
+                                    $output = $protocol->RESP2Encode($syncData, 2);
+                                    socket_write($childSock, $output);
+                                }
+                            }
                             break;
                         case "GET":
                             // implement get command
@@ -191,6 +194,8 @@ while (true) {
                                     // without \r\n
                                     $output = substr($output, 0, -2);
                                     socket_write($socket, $output);
+                                    // add socket to childNodes
+                                    $childNodes[] = $socket;
                                 }
                             }
                             break;
