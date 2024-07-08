@@ -121,9 +121,12 @@ while (true) {
                             $key = $decoded[1];
                             $value = $decoded[2];
                             // px 100
-                            $pxCmd = $decoded[3] ?? null;
+                            $pxCmd = "";
+                            if (count($decoded) >= 3) {
+                                $pxCmd = $decoded[3] ?? null;
+                            }
                             $expireAtMilliseconds = 0;
-                            if ("px" == $decoded[3]) {
+                            if ("px" == $pxCmd) {
                                 $expireMilliseconds = $decoded[4] ?? 0;
                                 if ($expireMilliseconds > 0) {
                                     $expireAtMilliseconds = microtime(true) * 1000 + $expireMilliseconds;
